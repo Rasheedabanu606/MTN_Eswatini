@@ -1,0 +1,36 @@
+-- Raw dump:
+
+SELECT
+    msc_a_number_normalized,
+    msc_recordtype,
+    msc_event_type,
+    msc_b_number_normalized,
+    msc_calculated_duration,
+    msc_start_dttm
+FROM minio.default.u_msc
+WHERE msc_record_type IN ('MTC', 'MOC', 'SMST', 'SMSO', 'CF', 'RCF')
+  AND msc_event_type IN ('Voice', 'SMS')
+  AND msc_start_dttm >= TIMESTAMP '2026-**-** 00:00:00'
+  AND msc_start_dttm < TIMESTAMP '2026-**-** 00:00:00';
+
+
+
+
+
+
+SELECT
+    '** - ****' AS month_year,
+    msc_a_number_normalized,
+
+    COUNT(CASE WHEN msc_recordtype = 'MTC' AND msc_event_type = 'Voice' THEN 1 END) AS total_incoming_calls,
+    COUNT(CASE WHEN msc_recordtype = 'MOC' AND msc_event_type = 'Voice' THEN 1 END) AS total_outgoing_calls,
+    COUNT(CASE WHEN msc_recordtype = 'SMST' AND msc_event_type = 'SMS' THEN 1 END) AS total_incoming_sms,
+    COUNT(CASE WHEN msc_recordtype = 'SMSO' AND msc_event_type = 'SMS' THEN 1 END) AS total_outgoing_sms,
+
+    SUM(CASE WHEN msc_event_type = 'Voice' THEN msc_calculated_duration ELSE 0 END) AS total_call_duration,
+
+    COUNT(CASE WHEN msc_recordtype IN ('CF', 'RCF') AND msc_event_type = 'Voice' THEN 1 END) AS total_calls_forwarded
+
+FROM minio.default.msc_jan_raw_dump_1
+GROUP BY msc_a_number_normalized;
+
