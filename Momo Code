@@ -1,0 +1,51 @@
+SELECT 
+   mot_msisdn as msisdn,
+    '**-****' AS month_year,  --    
+    -- Total Money Sent
+    SUM(
+        CASE WHEN mot_trans_type IN ('DEBIT', 'CASH_OUT', 'FLOAT_TRANSFER', 'TRANSFER', 
+                                     'PAYMENT', 'EXTERNAL_PAYMENT', 'EXTERNAL_TRANSFER') 
+             THEN mot_trans_amount 
+             ELSE 0 
+        END
+    ) AS total_money_sent,
+
+    -- Total Money Received
+    SUM(
+        CASE WHEN mot_trans_type IN ('CREDIT', 'CASH_IN', 'REFUND', 'REVERSAL', 'DEPOSIT') 
+             THEN mot_trans_amount 
+             ELSE 0 
+        END
+    ) AS total_money_received,
+
+    -- Number of Unique Users Money Was Sent To
+    COUNT(DISTINCT CASE 
+        WHEN mot_trans_type IN ('DEBIT', 'CASH_OUT', 'FLOAT_TRANSFER', 'TRANSFER', 
+                                'PAYMENT', 'EXTERNAL_PAYMENT', 'EXTERNAL_TRANSFER') 
+        THEN mot_received_msisdn 
+        ELSE NULL 
+    END) AS num_unique_users_sent_to,
+
+  -- Number of Unique Users Money Was Received From 
+    COUNT(DISTINCT CASE 
+        WHEN mot_trans_type IN ('CREDIT', 'CASH_IN', 'REFUND', 'REVERSAL', 'DEPOSIT') 
+        THEN mot_received_msisdn  -- Counting unique users who sent money to mot_msisdn
+        ELSE NULL 
+    END) AS num_unique_users_received_from,
+
+    -- Usual Hour of Transaction (Approximate Median Hour)
+    CAST(
+        APPROX_PERCENTILE(EXTRACT(HOUR FROM mot_date_time), 0.5) AS INTEGER
+    ) AS usual_hour_of_transaction,
+
+    -- Different Transaction Types Used
+    COUNT(DISTINCT mot_trans_type) AS diff_transaction_types_used
+
+FROM minio.default.u_momo_transactions
+WHERE 
+    -- Filtering transactions
+    EXTRACT(YEAR FROM mot_date_time) = ****  
+    AND EXTRACT(MONTH FROM mot_date_time) = **
+    -- Only considering COMMITTED transactions
+    AND mot_trans_status = 'COMMITTED'
+GROUP BY mot_msisdn;
