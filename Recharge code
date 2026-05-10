@@ -1,0 +1,13 @@
+SELECT 
+    air_a_number_norm AS msisdn,
+    '** - **' AS month_year,
+    SUM(air_transaction_amt_main) AS total_recharge_amount,
+    COUNT(*) AS number_of_recharges
+FROM 
+    minio.default.u_in_air
+WHERE 
+    air_record_type_name = 'Refill'
+    AND air_start_dttm >= TIMESTAMP '2026-**-** 00:00:00'
+    AND air_start_dttm < TIMESTAMP '2026-**-** 00:00:00'
+GROUP BY 
+    air_a_number_norm;
