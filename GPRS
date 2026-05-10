@@ -1,0 +1,68 @@
+
+CREATE TABLE minio.default.gprs_jan_2026 (
+    gpr_anumber_normalized VARCHAR,
+    gpr_recordtype_name VARCHAR,
+    gpr_uplink_volume DOUBLE,  
+    gpr_downlink_volume DOUBLE, 
+    gpr_reserved8 VARCHAR,  
+    gpr_reserved6 VARCHAR,  
+    gpr_timestamp_partition DATE,  --  partition by this column
+    month_year VARCHAR
+);
+
+
+
+
+INSERT INTO minio.default.gprs_jan_2026
+SELECT
+    gpr_anumber_normalized,
+    gpr_recordtype_name,
+    gpr_uplink_volume,   
+    gpr_downlink_volume, 
+    gpr_reserved8,       
+    gpr_reserved6,       
+    gpr_timestamp_partition,
+    '01-2026' AS month_year
+FROM minio.default.u_gprs
+WHERE 
+    gpr_timestamp_partition >= TIMESTAMP '2026-01-01 00:00:00'
+    AND gpr_timestamp_partition < TIMESTAMP '2026-01-02 00:00:00';
+
+
+
+INSERT INTO minio.default.gprs_jan_summarised_data_batchwise
+SELECT 
+    gpr_anumber_normalized AS msisdn,
+    '01-2026' AS month_year,
+    
+    -- Total uploaded data volume (cast everything to BIGINT)
+    SUM(
+        CASE 
+            WHEN gpr_recordtype_name <> 'PGW' THEN CAST(gpr_uplink_volume AS BIGINT)
+            ELSE 0
+        END
+    ) +
+    SUM(
+        CASE 
+            WHEN gpr_recordtype_name = 'PGW' THEN TRY_CAST(gpr_reserved8 AS BIGINT)
+            ELSE 0
+        END
+    ) AS total_uploaded_data_volume,
+
+    -- Total downloaded data volume
+    SUM(
+        CASE 
+            WHEN gpr_recordtype_name <> 'PGW' THEN CAST(gpr_downlink_volume AS BIGINT)
+            ELSE 0
+        END
+    ) +
+    SUM(
+        CASE 
+            WHEN gpr_recordtype_name = 'PGW' THEN TRY_CAST(gpr_reserved6 AS BIGINT)
+            ELSE 0
+        END
+    ) AS total_downloaded_data_volume
+
+FROM minio.default.gprs_jan_2026
+GROUP BY gpr_anumber_normalized;
+
